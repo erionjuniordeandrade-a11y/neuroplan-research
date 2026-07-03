@@ -1,0 +1,11 @@
+marker,x_mm,y_mm,z_mm,diameter_mm,source,notes
+F1,-70,-45,15,4,design_candidate,inferior posterior-left field anchor
+F2,70,-45,15,4,design_candidate,inferior posterior-right field anchor
+F3,-70,45,15,4,design_candidate,inferior anterior-left field anchor
+F4,70,45,15,4,design_candidate,inferior anterior-right field anchor
+F5,-55,-20,70,4,design_candidate,superior posterior-left anchor
+F6,55,-20,70,4,design_candidate,superior posterior-right anchor
+F7,-35,35,80,4,design_candidate,superior anterior-left anchor
+F8,35,35,80,4,design_candidate,superior anterior-right anchor
+F9,0,-55,50,4,design_candidate,midline posterior anchor
+F10,0,55,50,4,design_candidate,midline anterior anchor
