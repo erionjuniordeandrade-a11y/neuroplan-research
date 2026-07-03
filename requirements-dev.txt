@@ -1,0 +1,5 @@
+# Dev/test dependencies for the standalone (non-Slicer) safety modules.
+# The Slicer extension itself runs inside 3D Slicer's bundled Python.
+pydicom>=2.4
+numpy>=1.24
+pytest>=7.4

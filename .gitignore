@@ -1,0 +1,29 @@
+# Imaging data — NEVER commit patient/phantom volumes
+*.dcm
+*.nii
+*.nii.gz
+*.nrrd
+*.mha
+*.mhd
+data/
+cases/
+*.DICOMDIR
+
+# Slicer scene / outputs
+*.mrml
+*.mrb
+Output/
+build/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
