@@ -1,25 +1,16 @@
 # Session Checkpoint — neuroplan-research
-**Date**: 2026-07-03 06:49
+**Date**: 2026-07-03 06:53
 **Branch**: main
-**HEAD**: 1dd8d30e19861ede60d78c2dbc2ca866a79497a0
+**HEAD**: 8c9f291892fe7588f2b7eaddee6f18afdb8a8565
 **Snapshot**: Mechanical (git state) — run /handoff-checkpoint for full semantic version
 
 ## Recent Commits (last 5)
+8c9f291 docs: expand phantom design spec and add candidate ground-truth geometry
+ee1a6f6 feat: add neuroplan_ui research UX layer over 3D Slicer
 1dd8d30 chore: scaffold NeuroPlan research planning extension
 
 ## Pending Changes
- M phantom/README.md
- M requirements-dev.txt
-?? docs/ux-layer-architecture.md
-?? handoff/SESSION-CHECKPOINT.md
-?? neuroplan_ui/
-?? phantom/cad/
-?? phantom/ground_truth_fiducials.candidate.csv
-?? phantom/ground_truth_targets.candidate.csv
-?? tests/test_command_parser.py
-?? tests/test_export_banner.py
-?? tests/test_pending_actions.py
-?? tests/test_workflow_gates.py
+Clean working tree
 
 ## Where We Stopped
 [Not captured automatically — fill in or run /handoff-checkpoint skill]
