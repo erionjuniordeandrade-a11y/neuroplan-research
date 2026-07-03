@@ -3,3 +3,5 @@
 pydicom>=2.4
 numpy>=1.24
 pytest>=7.4
+# UX layer dashboard (only needed to RUN app.py; the core + tests do not import it).
+streamlit>=1.30
