@@ -84,12 +84,28 @@ def register_and_resample(fixed: VolumeHandle, moving: VolumeHandle, *,
 
 @dataclasses.dataclass(frozen=True)
 class SegmentationProposal:
-    """An AI segmentation PROPOSAL. Never a final result (spec R4)."""
+    """An AI segmentation PROPOSAL. Never a final result (spec R4).
+
+    Contract fields:
+    - ``label_array``      the proposed binary label map.
+    - ``scalar_confidence`` model confidence in [0, 1]. Carried as DATA; it is
+      NOT shown to a human until calibration is proven — read it only through
+      ``segmentation_proposal.displayable_confidence`` (see Phase 2/7).
+    - ``per_voxel_uncertainty`` optional per-voxel uncertainty map; honest null
+      (``None``) when the model does not provide one — never fabricated.
+    - ``is_proposal``      always True; a proposal is never a final result.
+    - ``accepted_by_human`` set only by a human acceptance step, never by the model.
+    - ``reject`` / ``reject_reason`` the model may self-reject a low-quality output
+      with a named reason (fail loud), rather than emit a bad proposal silently.
+    """
 
     label_array: Any
     scalar_confidence: float
+    per_voxel_uncertainty: Any = None
     is_proposal: bool = True
     accepted_by_human: bool = False
+    reject: bool = False
+    reject_reason: str = ""
 
 
 def propose_segmentation(volume: VolumeHandle) -> SegmentationProposal:
