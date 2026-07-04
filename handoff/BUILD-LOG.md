@@ -5,6 +5,28 @@ the full phased roadmap and `CONTEXT.md` for the domain glossary.
 
 ---
 
+## 2026-07-04 — Phase 3: widget decision logic (offline half) `[OFFLINE]`
+
+- Added pure `NeuroPlan/NeuroPlanWorkflow/widget_logic.py`: `can_advance`
+  (de-ID hard block via shared `gate_policy`) + `badge_for` (gate-state → badge,
+  fails loud on unknown state). Widget `NeuroPlanWorkflow.can_advance` now
+  delegates to it; the widget is a thin renderer.
+- `tests/test_widget_logic.py`: de-ID never advances on failure for ANY reason;
+  overridable gate needs a reason; badge mapping exhaustive over `GateState`.
+- Verification tier: safety-critical (de-ID hard block from 2nd UI) → unit tests.
+- Suite 106 → 116.
+
+## 2026-07-04 — Phase 2: segmentation-proposal contract + confidence gate `[OFFLINE]`
+
+- Extended `slicer_bridge.SegmentationProposal` (per_voxel_uncertainty honest
+  null, reject + reject_reason). Added pure
+  `NeuroPlan/NeuroPlanWorkflow/segmentation_proposal.py`: `validate_proposal`
+  (fails loud on non-proposal / pre-accepted / bad confidence / unreasoned
+  reject / shape mismatch) and `displayable_confidence` (honest null until
+  `CONFIDENCE_CALIBRATED`, decision 4).
+- `tests/test_segmentation_proposal.py` (9). Suite 97 → 106.
+- Verification tier: safety-critical (AI-proposes/human-decides) → unit tests.
+
 ## 2026-07-04 — Phase 0: housekeeping & phantom-CSV fixture `[OFFLINE]`
 
 - Baseline before this phase: `./.venv/bin/pytest -q` → **86 passed**.

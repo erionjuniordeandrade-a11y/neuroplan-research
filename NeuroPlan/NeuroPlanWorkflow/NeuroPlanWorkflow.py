@@ -28,7 +28,7 @@ except ImportError:  # doc/lint/test environments
     ScriptedLoadableModuleWidget = object      # type: ignore
     ScriptedLoadableModuleLogic = object       # type: ignore
 
-from . import deid_gate, gate_policy, metrics, registration_quality
+from . import deid_gate, gate_policy, metrics, registration_quality, widget_logic
 
 BANNER = (
     "Research use only. Not for clinical or intraoperative decision-making. "
@@ -145,11 +145,7 @@ class NeuroPlanWorkflowWidget(ScriptedLoadableModuleWidget):
         a PHI-carrying scan can never be waved through from either UI. ``stage_key``
         is a canonical key from :mod:`gate_policy` (e.g. ``gate_policy.DEIDENTIFY``).
         """
-        if gate_passed:
-            return True
-        if not gate_policy.is_overridable(stage_key):
-            return False  # hard block — no override, no matter the reason
-        if override_reason.strip():
-            # TODO: append {step, reason, operator, timestamp} to the case audit log.
-            return True
-        return False
+        # Decision logic is pure and unit-tested in widget_logic; this method is
+        # the thin widget seam. TODO(week6): on a permitted override, append
+        # {step, reason, operator, timestamp} to the case audit log before advancing.
+        return widget_logic.can_advance(stage_key, gate_passed, override_reason)
