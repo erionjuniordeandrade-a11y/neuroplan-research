@@ -30,15 +30,40 @@ class ForbiddenField(RuntimeError):
     """Raised when an export payload contains a clinical-decision field."""
 
 
+def _assert_no_clinical_content(value: Any, path: str) -> None:
+    """Recursively reject clinical-decision content anywhere in ``value``.
+
+    Checks BOTH dict keys and string values (nested to any depth). A key or a
+    free-text value like "recommend GTR" / "glioblastoma WHO IV" is a
+    clinical-decision leak — the guard covers values, not just top-level keys, so
+    it cannot be bypassed by hiding a decision in a note field or a label."""
+    if isinstance(value, Mapping):
+        for k, v in value.items():
+            if isinstance(k, str) and k.lower() in _FORBIDDEN_FIELDS:
+                raise ForbiddenField(
+                    f"'{path}.{k}' is a clinical-decision field and is not "
+                    f"permitted in a research export")
+            _assert_no_clinical_content(v, f"{path}.{k}")
+    elif isinstance(value, (list, tuple)):
+        for i, item in enumerate(value):
+            _assert_no_clinical_content(item, f"{path}[{i}]")
+    elif isinstance(value, str):
+        low = value.lower()
+        for term in _FORBIDDEN_FIELDS:
+            if term in low:
+                raise ForbiddenField(
+                    f"value at '{path}' contains the clinical-decision term "
+                    f"'{term}' and is not permitted in a research export")
+
+
 def build_artifact(*, case_label: str, metrics: Mapping[str, Any],
                    registration_reason: str, audit: list[dict[str, Any]],
                    model_path: str | None = None) -> dict[str, Any]:
     """Assemble a banner-stamped research artifact dict. Never includes PHI."""
-    for key in metrics:
-        if key.lower() in _FORBIDDEN_FIELDS:
-            raise ForbiddenField(
-                f"metric field '{key}' is a clinical-decision field and is not "
-                f"permitted in a research export")
+    # Guard the free-text label and the whole metrics tree (keys + values, any
+    # depth) — not just top-level metric keys.
+    _assert_no_clinical_content(case_label, "case_label")
+    _assert_no_clinical_content(metrics, "metrics")
 
     payload: dict[str, Any] = {
         "schema": "neuroplan-research-artifact/v1",

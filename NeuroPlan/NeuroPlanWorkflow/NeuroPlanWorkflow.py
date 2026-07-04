@@ -28,7 +28,7 @@ except ImportError:  # doc/lint/test environments
     ScriptedLoadableModuleWidget = object      # type: ignore
     ScriptedLoadableModuleLogic = object       # type: ignore
 
-from . import deid_gate, registration_quality
+from . import deid_gate, gate_policy, metrics, registration_quality
 
 BANNER = (
     "Research use only. Not for clinical or intraoperative decision-making. "
@@ -76,11 +76,44 @@ class NeuroPlanWorkflowLogic(ScriptedLoadableModuleLogic):
         raise NotImplementedError("week 3")
 
     # --- Step 5: Deterministic planning metrics ---------------------------
-    def compute_metrics(self, segmentation_node, fiducials=None):
-        """TODO(week4): volume (mL), max diameter (mm), depth-from-surface (mm),
-        distance-to-fiducial (mm). Pure geometry, phantom-anchored. Flags
-        implausible values (honest nulls) instead of clamping."""
-        raise NotImplementedError("week 4")
+    def compute_metrics(self, segmentation_node, fiducials=None,
+                        surface_node=None):
+        """Deterministic geometry: volume (mL), max diameter (mm),
+        depth-from-surface (mm), distance-to-fiducial (mm). The math lives in the
+        tested, Slicer-independent :mod:`metrics` module (phantom-anchored, honest
+        nulls, flags implausible values instead of clamping). This method's only
+        job is the Slicer seam: turn nodes into arrays + spacing, then delegate.
+
+        Prefer :meth:`compute_metrics_from_arrays` in tests and offline callers —
+        it needs no Slicer node."""
+        mask, spacing = self._array_and_spacing(segmentation_node)
+        surface_mask = (self._array_and_spacing(surface_node)[0]
+                        if surface_node is not None else None)
+        fiducial_mm = fiducials[0] if fiducials else None
+        return metrics.compute_metrics(
+            mask, spacing, surface_mask=surface_mask, fiducial_mm=fiducial_mm)
+
+    def compute_metrics_from_arrays(self, mask, spacing, *,
+                                    surface_mask=None, fiducial_mm=None,
+                                    origin=(0.0, 0.0, 0.0)):
+        """Slicer-free entry point to the metric layer (delegates to
+        :func:`metrics.compute_metrics`). This is what the tests exercise."""
+        return metrics.compute_metrics(
+            mask, spacing, surface_mask=surface_mask,
+            fiducial_mm=fiducial_mm, origin=origin)
+
+    @staticmethod
+    def _array_and_spacing(node):
+        """TODO(week4, Slicer seam): extract a binary label array + (sx,sy,sz)
+        spacing from a Slicer segmentation/volume node. Only reachable inside a
+        running 3D Slicer; offline callers use ``compute_metrics_from_arrays``."""
+        if not _IN_SLICER:
+            raise NotImplementedError(
+                "node->array extraction requires a running 3D Slicer; use "
+                "compute_metrics_from_arrays(mask, spacing) offline")
+        # In Slicer: slicer.util.arrayFromSegmentBinaryLabelmap(...) for the mask
+        # and node.GetSpacing() for the voxel spacing.
+        raise NotImplementedError("week 4 — Slicer node extraction")
 
     # --- Step 6: Structured research report -------------------------------
     def build_report(self, case):
@@ -102,11 +135,20 @@ class NeuroPlanWorkflowWidget(ScriptedLoadableModuleWidget):
         # TODO(week1-6): progress rail, per-step panels, red/green gate badges,
         # "override with reason" (logged), always-visible report preview + banner.
 
-    def can_advance(self, gate_passed: bool, override_reason: str = "") -> bool:
+    def can_advance(self, stage_key: str, gate_passed: bool,
+                    override_reason: str = "") -> bool:
         """Next unlocks only when the step gate passes, or the surgeon explicitly
-        overrides with a logged reason."""
+        overrides with a logged reason — EXCEPT for hard-block stages.
+
+        The hard-block rule (de-identification) comes from the shared
+        ``gate_policy`` module, the same source neuroplan_ui/workflow.py uses, so
+        a PHI-carrying scan can never be waved through from either UI. ``stage_key``
+        is a canonical key from :mod:`gate_policy` (e.g. ``gate_policy.DEIDENTIFY``).
+        """
         if gate_passed:
             return True
+        if not gate_policy.is_overridable(stage_key):
+            return False  # hard block — no override, no matter the reason
         if override_reason.strip():
             # TODO: append {step, reason, operator, timestamp} to the case audit log.
             return True

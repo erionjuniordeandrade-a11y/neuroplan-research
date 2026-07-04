@@ -50,7 +50,9 @@ RETAINED_KEYWORDS: frozenset[str] = frozenset({
     "SOPClassUID", "FrameOfReferenceUID",
 })
 
-# UID keywords that must be regenerated (deterministically pseudonymized).
+# UID keywords that must be regenerated. Each is replaced with a FRESH RANDOM
+# UID (pydicom.uid.generate_uid) per call — deliberately NOT deterministic, so
+# the de-identified series cannot be linked back to the original by UID.
 _UID_KEYWORDS = ("StudyInstanceUID", "SeriesInstanceUID", "SOPInstanceUID",
                  "FrameOfReferenceUID")
 

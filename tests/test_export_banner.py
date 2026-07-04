@@ -69,3 +69,39 @@ def test_to_json_roundtrips_with_banner():
         registration_reason="ok", audit=[])
     text = export.to_json(artifact)
     assert banner.RESEARCH_BANNER in text
+
+
+# --- deep clinical-content guard (not just top-level metric keys) ----------
+
+def test_rejects_clinical_field_nested_in_metrics():
+    with pytest.raises(export.ForbiddenField, match="diagnosis"):
+        export.build_artifact(
+            case_label="phantom_01",
+            metrics={"detail": {"diagnosis": "meningioma"}},  # nested key
+            registration_reason="ok", audit=[])
+
+
+def test_rejects_clinical_content_in_metric_value():
+    with pytest.raises(export.ForbiddenField):
+        export.build_artifact(
+            case_label="phantom_01",
+            metrics={"note": "recommend GTR via pterional approach"},  # value
+            registration_reason="ok", audit=[])
+
+
+def test_rejects_clinical_content_in_case_label():
+    with pytest.raises(export.ForbiddenField):
+        export.build_artifact(
+            case_label="glioblastoma WHO grade IV",  # free-text label leak
+            metrics={"volume_ml": 4.19},
+            registration_reason="ok", audit=[])
+
+
+def test_clean_research_artifact_still_builds():
+    # A legitimate research artifact with only geometry must pass unchanged.
+    artifact = export.build_artifact(
+        case_label="phantom_01",
+        metrics={"volume_ml": 4.19, "max_diameter_mm": 20.0,
+                 "detail": {"voxel_count": 4000}},
+        registration_reason="NMI 2.0 >= 1.05: accepted", audit=[])
+    assert artifact["metrics"]["volume_ml"] == 4.19

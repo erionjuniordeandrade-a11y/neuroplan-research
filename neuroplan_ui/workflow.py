@@ -62,11 +62,30 @@ class GateState(str, Enum):
 # States that let the *next* stage proceed.
 _OPEN_STATES = frozenset({GateState.PASSED, GateState.OVERRIDDEN})
 
-# Gates a human may override with a logged reason. De-identification is a HARD
-# BLOCK and is deliberately absent: a scan that fails de-ID carries PHI and must
-# never reach downstream stages, override or not. Registration quality is a
-# judgment call the surgeon is allowed to accept responsibility for.
-_OVERRIDABLE_STAGES = frozenset({Stage.REGISTER})
+# Canonical stage keys shared with the in-Slicer widget via gate_policy — the
+# de-ID hard block is defined in ONE place, not re-implemented per UI.
+_STAGE_KEYS: dict[Stage, str] = {
+    Stage.IMPORT: "import", Stage.DEIDENTIFY: "deidentify",
+    Stage.REGISTER: "register", Stage.SEGMENT: "segment",
+    Stage.METRICS: "metrics", Stage.EXPORT: "export",
+}
+
+
+def _gate_policy():
+    """Load the shared gate-override policy from the NeuroPlan safety package.
+
+    Lazy + sys.path-inserted for the same reason as Gates.default(): the policy
+    lives beside the tested safety modules, which are the single source of truth
+    both this Streamlit workflow and the Slicer widget consult."""
+    import os
+    import sys
+
+    pkg = os.path.join(os.path.dirname(__file__), "..",
+                       "NeuroPlan", "NeuroPlanWorkflow")
+    if pkg not in sys.path:
+        sys.path.insert(0, pkg)
+    import gate_policy  # type: ignore
+    return gate_policy
 
 
 class GateBlocked(RuntimeError):
@@ -140,8 +159,9 @@ class WorkflowState:
 
     def can_override(self, stage: Stage) -> bool:
         """True only for gates a human is permitted to override. De-ID is a hard
-        block and always returns False here."""
-        return stage in _OVERRIDABLE_STAGES
+        block and always returns False here — the decision comes from the shared
+        gate_policy, not a local copy of the rule."""
+        return _gate_policy().is_overridable(_STAGE_KEYS[stage])
 
     def can_run(self, stage: Stage) -> bool:
         """True when ``stage`` is unlocked and every prior stage is open."""
@@ -262,11 +282,10 @@ class WorkflowState:
         De-identification is NOT overridable: a de-ID failure means PHI may
         remain, which no human reason can make safe. Attempting to override it
         is refused loudly."""
-        if stage not in _OVERRIDABLE_STAGES:
+        if not self.can_override(stage):
             raise GateBlocked(
                 f"{stage.value} is a hard block and cannot be overridden "
-                f"(only {', '.join(s.value for s in _OVERRIDABLE_STAGES)} may "
-                f"be overridden)")
+                f"(de-identification failures may never be waved through)")
         if self.gates[stage] is not GateState.FAILED:
             raise GateBlocked(f"{stage.value} is not in a FAILED state to override")
         if not operator.strip():
